@@ -31,9 +31,7 @@ jobs:
           echo "REACT_APP_MIXPANEL_TOKEN=80be39b7ea683e82092f8692eb6b1660" >> $GITHUB_ENV
           echo "REACT_APP_SENTRY_DSN=https://d886ded5bad64bde85744d2166198bb7@o1243894.ingest.sentry.io/6400030" >> $GITHUB_ENV
       
-      - name: Get timestamp
-        run: |
-          echo "REACT_APP_AG_DATE=$(date +"%s")" >> $GITHUB_ENV
+
 
       - name: Show variables
         run: |
@@ -43,26 +41,9 @@ jobs:
           echo "REACT_APP_AG_TAG=${REACT_APP_AG_TAG}"
           echo "REACT_APP_AG_DATE=${REACT_APP_AG_DATE}"
 
-      - run: env
-
-      - name: Installing dependencies
-        run: npm ci
-        working-directory: .
-
-      - name: Building common
-        run: npm run build -w packages/common
-        working-directory: .
-
-      - name: Building components
-        run: npm run build -w packages/components
-        working-directory: .
-
-      - name: Building web app
-        run: npm run build -w packages/web-app
-        working-directory: .
-
+      
       - name: Source Configuration
-        working-directory: ./preview-env/web-app
+        working-directory: ./web-app
         run: |
           # make input envvars available to all steps
           source config
@@ -86,7 +67,7 @@ jobs:
 
       - name: Deploy to ephemeral environment 
         id: furl
-        working-directory: ./preview-env/web-app
+        working-directory: ./web-app
         run: |
           terraform init \
             -backend-config="bucket=${TF_BACKEND_S3_BUCKET}" \
