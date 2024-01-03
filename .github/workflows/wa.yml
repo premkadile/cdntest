@@ -1,0 +1,83 @@
+name: Web App Deployment
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      REACT_APP_LOGROCKET_ID: zs1rvx/augie-uat
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+    name: Deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: dev branch environment variables
+        run: |
+          echo "REACT_APP_SERVER_BASE_URL=https://md89ke6cbq.us-east-1.awsapprunner.com" >> $GITHUB_ENV
+          echo "REACT_APP_MEDIA_SERVICE_BASE_URL=https://sphhp52wfg.us-east-1.awsapprunner.com" >> $GITHUB_ENV
+          echo "REACT_APP_APPSYNC_ENDPOINT=https://pvmgjzv4lbc2rcotkkq26zewly.appsync-api.us-east-1.amazonaws.com/graphql" >> $GITHUB_ENV
+          echo "REACT_APP_APPSYNC_APIKEY=da2-3qpfmugzkzdwraqpn426v2355y" >> $GITHUB_ENV
+          echo "REACT_APP_APPSYNC_REGION=us-east-1" >> $GITHUB_ENV
+          echo "REACT_APP_AG_TAG=$(git describe --tags)" >> $GITHUB_ENV
+          echo "REACT_APP_GOOGLE_ANALYTICS_ID=G-5VBK7R2PPV" >> $GITHUB_ENV
+          echo "REACT_APP_MIXPANEL_TOKEN=80be39b7ea683e82092f8692eb6b1660" >> $GITHUB_ENV
+          echo "REACT_APP_SENTRY_DSN=https://d886ded5bad64bde85744d2166198bb7@o1243894.ingest.sentry.io/6400030" >> $GITHUB_ENV
+      
+
+
+      - name: Show variables
+        run: |
+          # Short name for current branch
+          echo "Event=${GITHUB_EVENT_NAME} ${GITHUB_REF_TYPE}"
+          echo "SHA=${GITHUB_SHA}"
+          echo "REACT_APP_AG_TAG=${REACT_APP_AG_TAG}"
+          echo "REACT_APP_AG_DATE=${REACT_APP_AG_DATE}"
+
+      
+      - name: Source Configuration
+        working-directory: .
+        run: |
+          # make input envvars available to all steps
+          source config
+          echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
+          echo "AWS_ROLE=${AWS_ROLE}" >> $GITHUB_ENV
+          echo "TF_BACKEND_S3_BUCKET=${TF_BACKEND_S3_BUCKET}" >> $GITHUB_ENV
+          environment=${GITHUB_HEAD_REF##*/}
+          echo "ENVIRONMENT=${environment}" >> $GITHUB_ENV
+
+      - name: Assume AWS IAM Role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_ROLE }}
+
+      - name: Install Terraform CLI
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.9
+          terraform_wrapper: false
+
+      - name: Deploy to ephemeral environment 
+        id: furl
+        working-directory: .
+        run: |
+          terraform init \
+            -backend-config="bucket=${TF_BACKEND_S3_BUCKET}" \
+            -backend-config="key=${ENVIRONMENT}.tfstate"
+
+          terraform apply -auto-approve \
+            -var="name=augie-preview-env-test-webapp" \
+            -var="environment=dev"
+
+      - name: Copy files to the test website with the AWS CLI
+        working-directory: .
+        run: |
+          aws s3 sync . s3://augie-preview-env-test-webapp-dev

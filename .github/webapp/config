@@ -1,0 +1,3 @@
+export AWS_REGION="us-east-1"
+export AWS_ROLE="arn:aws:iam::207989156526:role/github-action-ephemeral-preview-containers-furl"
+export TF_BACKEND_S3_BUCKET="tf-state-ephemeral-preview-env-setup-697663401901"
