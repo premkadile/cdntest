@@ -43,7 +43,7 @@ jobs:
 
       
       - name: Source Configuration
-        working-directory: ./web-app
+        working-directory: ./webapp
         run: |
           # make input envvars available to all steps
           source config
@@ -67,7 +67,7 @@ jobs:
 
       - name: Deploy to ephemeral environment 
         id: furl
-        working-directory: ./web-app
+        working-directory: ./webapp
         run: |
           terraform init \
             -backend-config="bucket=${TF_BACKEND_S3_BUCKET}" \
