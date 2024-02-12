@@ -9,16 +9,14 @@ on:
 env:
   DOCKER_BUILDKIT: 1
   SERVICE_PREFIX: augie
-  backend_uat:
-   CPU: 2
-   MEMORY: 12
-   AG_SERVICE: augie-uat
-   ENVIRONMENT: uat
-  media_service_uat:
-   CPU: 2
-   MEMORY: 12
-   AG_SERVICE: augie-uat-media-service
-   ENVIRONMENT: uat
+  CPU_BACKEND_UAT: 2
+  MEMORY_BACKEND_UAT: 12
+  AG_SERVICE_BACKEND_UAT: augie-uat
+  ENVIRONMENT_BACKEND_UAT: uat
+  CPU_MEDIA_SERVICE_UAT: 2
+  MEMORY_MEDIA_SERVICE_UAT: 12
+  AG_SERVICE_MEDIA_SERVICE_UAT: augie-uat-media-service
+  ENVIRONMENT_MEDIA_SERVICE_UAT: uat
 
 jobs:
   deploy:
