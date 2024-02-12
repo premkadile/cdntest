@@ -74,7 +74,7 @@ jobs:
       #       --build-arg "AG_TAG=$AG_TAG" \
       #       --build-arg "AG_DATE=$AG_DATE" \
       #       --build-arg "GIT_SHA=$GITHUB_SHA" \
-            "."
+            # "."
           # docker push $IMAGE
           # echo "::set-output name=image::$IMAGE"
 
