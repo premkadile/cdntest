@@ -1,0 +1,180 @@
+name: Release deploy on UAT App Runner
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'The release branch. Ex- release/v1.0.0'
+        required: true   
+         
+env:
+  DOCKER_BUILDKIT: 1
+  SERVICE_PREFIX: augie
+  backend_uat:
+   CPU: 2
+   MEMORY: 12
+   AG_SERVICE: augie-uat
+   ENVIRONMENT: uat
+  media_service_uat:
+   CPU: 2
+   MEMORY: 12
+   AG_SERVICE: augie-uat-media-service
+   ENVIRONMENT: uat
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest-l
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - run: env
+
+      - name: Get timestamp, tag and release version
+        run: |
+          echo "AG_DATE=$(date +"%s")" >> $GITHUB_ENV
+          echo "AG_TAG=$(git describe --tags)" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "SHA=${GITHUB_SHA}"
+
+      - name: Show variables
+        run: |
+          echo "SHA=${GITHUB_SHA}"
+          echo "AG_TAG=${AG_TAG}"
+          echo "AG_DATE=${AG_DATE}"
+          echo "AG_SERVICE=${AG_SERVICE}"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}"
+
+      # - name: Configure AWS credentials
+      #   id: aws-credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+
+      # - name: Login to Amazon ECR
+      #   id: login-ecr
+      #   uses: aws-actions/amazon-ecr-login@v1
+
+      # - name: Build backend
+      #   id: build-backend
+      #   env:
+      #     IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.backend_uat.AG_SERVICE }}:backend-cache
+      #   run: |
+      #     docker build \
+      #       --target build-node \
+      #       --cache-from $IMAGE \
+      #       --tag $IMAGE \
+      #       --file Dockerfile \
+      #       --build-arg BUILDKIT_INLINE_CACHE=1 \
+      #       --build-arg "AG_TAG=$AG_TAG" \
+      #       --build-arg "AG_DATE=$AG_DATE" \
+      #       --build-arg "GIT_SHA=$GITHUB_SHA" \
+            "."
+          # docker push $IMAGE
+          # echo "::set-output name=image::$IMAGE"
+
+      - name: Build backend final image
+        id: build-image
+        env:
+          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.backend_uat.AG_SERVICE }}:${RELEASE_VERSION}
+        run: |
+          docker build \
+            --cache-from ${{ steps.build-backend.outputs.image }} \
+            --cache-from $IMAGE \
+            --tag $IMAGE \
+            --file Dockerfile \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg NO_COLOR=true \
+            --build-arg "AG_TAG=$AG_TAG" \
+            --build-arg "AG_DATE=$AG_DATE" \
+            --build-arg "GIT_SHA=$GITHUB_SHA" \
+            "."
+          # docker push $IMAGE
+          # echo "::set-output name=image::$IMAGE"
+
+      # - name: Deploy to backend App Runner
+      #   id: deploy-apprunner
+      #   uses: awslabs/amazon-app-runner-deploy@main
+      #   with:
+      #     service: ${{ env.AG_SERVICE }}
+      #     image: ${{ steps.build-image.outputs.image }}
+      #     access-role-arn: arn:aws:iam::697663401901:role/augie-${{ env.AG_BRANCH }}-backend-role-access
+      #     region: ${{ secrets.AWS_REGION }}
+      #     cpu: ${{ env.CPU }}
+      #     memory: ${{ env.MEMORY }}
+      #     port: 8000
+      #     auto-scaling-config-arn: arn:aws:apprunner:us-east-1:697663401901:autoscalingconfiguration/DefaultConfiguration/1/00000000000000000000000000000001
+      #     # To save precious Action minutes don't wait for App Runner deploy to complete
+      #     # Deployment status can be obtained in App Runner console
+      #     # wait-for-service-stability: true
+
+      # - name: Backend App Runner output
+      #   run: echo "App runner output ${{ steps.deploy-apprunner.outputs.service-id }}"
+
+### Media Service Deploy       
+      - name: Build media service
+        id: build-service
+        env:
+          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.media_service_uat.AG_SERVICE }}:media-service-cache
+        run: |
+          docker build \
+            --target build \
+            --cache-from $IMAGE \
+            --tag $IMAGE \
+            --file packages/media-service/Dockerfile.cloud \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg "AG_TAG=$AG_TAG" \
+            --build-arg "AG_DATE=$AG_DATE" \
+            --build-arg "GIT_SHA=$GITHUB_SHA" \
+            "."
+          docker push $IMAGE
+          echo "::set-output name=image::$IMAGE"
+
+      - name: Build media service final image
+        id: build-image
+        env:
+          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.media_service_uat.AG_SERVICE }}:${RELEASE_VERSION}
+        run: |
+          docker build \
+            --cache-from ${{ steps.build-service.outputs.image }} \
+            --cache-from $IMAGE \
+            --tag $IMAGE \
+            --file packages/media-service/Dockerfile.cloud \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg NO_COLOR=true \
+            --build-arg "AG_TAG=$AG_TAG" \
+            --build-arg "AG_DATE=$AG_DATE" \
+            --build-arg "GIT_SHA=$GITHUB_SHA" \
+            "."
+          docker push $IMAGE
+          echo "::set-output name=image::$IMAGE"
+
+
+      # - name: Deploy to media service App Runner
+      #   id: deploy-apprunner
+      #   uses: awslabs/amazon-app-runner-deploy@main
+      #   with:
+      #     service: ${{ env.AG_SERVICE }}
+      #     image: ${{ steps.build-image.outputs.image }}
+      #     access-role-arn: arn:aws:iam::697663401901:role/augie-${{ env.AG_BRANCH }}-media-service-role-access
+      #     region: ${{ secrets.AWS_REGION }}
+      #     cpu: ${{ env.CPU }}
+      #     memory: ${{ env.MEMORY }}
+      #     port: 8000
+      #     auto-scaling-config-arn: arn:aws:apprunner:us-east-1:697663401901:autoscalingconfiguration/DefaultConfiguration/1/00000000000000000000000000000001
+      #     # To save precious Action minutes don't wait for App Runner deploy to complete
+      #     # Deployment status can be obtained in App Runner console
+      #     #
+      #     # wait-for-service-stability: true
+
+      # - name: Media service App Runner output
+      #   run: echo "App runner output ${{ steps.deploy-apprunner.outputs.service-id }}"
+  
+
+           
+      
