@@ -116,43 +116,43 @@ jobs:
       # - name: Backend App Runner output
       #   run: echo "App runner output ${{ steps.deploy-apprunner.outputs.service-id }}"
 
-### Media Service Deploy       
-      - name: Build media service
-        id: build-service
-        env:
-          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.media_service_uat.AG_SERVICE }}:media-service-cache
-        run: |
-          docker build \
-            --target build \
-            --cache-from $IMAGE \
-            --tag $IMAGE \
-            --file packages/media-service/Dockerfile.cloud \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --build-arg "AG_TAG=$AG_TAG" \
-            --build-arg "AG_DATE=$AG_DATE" \
-            --build-arg "GIT_SHA=$GITHUB_SHA" \
-            "."
-          docker push $IMAGE
-          echo "::set-output name=image::$IMAGE"
+# ### Media Service Deploy       
+#       - name: Build media service
+#         id: build-service
+#         env:
+#           IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.media_service_uat.AG_SERVICE }}:media-service-cache
+#         run: |
+#           docker build \
+#             --target build \
+#             --cache-from $IMAGE \
+#             --tag $IMAGE \
+#             --file packages/media-service/Dockerfile.cloud \
+#             --build-arg BUILDKIT_INLINE_CACHE=1 \
+#             --build-arg "AG_TAG=$AG_TAG" \
+#             --build-arg "AG_DATE=$AG_DATE" \
+#             --build-arg "GIT_SHA=$GITHUB_SHA" \
+#             "."
+#           docker push $IMAGE
+#           echo "::set-output name=image::$IMAGE"
 
-      - name: Build media service final image
-        id: build-image
-        env:
-          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.media_service_uat.AG_SERVICE }}:${RELEASE_VERSION}
-        run: |
-          docker build \
-            --cache-from ${{ steps.build-service.outputs.image }} \
-            --cache-from $IMAGE \
-            --tag $IMAGE \
-            --file packages/media-service/Dockerfile.cloud \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --build-arg NO_COLOR=true \
-            --build-arg "AG_TAG=$AG_TAG" \
-            --build-arg "AG_DATE=$AG_DATE" \
-            --build-arg "GIT_SHA=$GITHUB_SHA" \
-            "."
-          docker push $IMAGE
-          echo "::set-output name=image::$IMAGE"
+#       - name: Build media service final image
+#         id: build-image
+#         env:
+#           IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.media_service_uat.AG_SERVICE }}:${RELEASE_VERSION}
+#         run: |
+#           docker build \
+#             --cache-from ${{ steps.build-service.outputs.image }} \
+#             --cache-from $IMAGE \
+#             --tag $IMAGE \
+#             --file packages/media-service/Dockerfile.cloud \
+#             --build-arg BUILDKIT_INLINE_CACHE=1 \
+#             --build-arg NO_COLOR=true \
+#             --build-arg "AG_TAG=$AG_TAG" \
+#             --build-arg "AG_DATE=$AG_DATE" \
+#             --build-arg "GIT_SHA=$GITHUB_SHA" \
+#             "."
+#           docker push $IMAGE
+#           echo "::set-output name=image::$IMAGE"
 
 
       # - name: Deploy to media service App Runner
