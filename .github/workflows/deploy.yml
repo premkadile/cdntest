@@ -4,7 +4,7 @@ on:
   
 jobs:
   Backup-DB:
-    runs-on: buildjet-2vcpu-ubuntu-2204
+    runs-on: ubuntu-latest-l
     steps:
       - name: Get tag name
         id: get-tag
